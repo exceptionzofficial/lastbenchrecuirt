@@ -442,7 +442,7 @@ function App() {
               <span>Recruiter Panel</span>
             </div>
             <a 
-              href="http://localhost:5173" 
+              href={window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5173' : 'https://last-bench-theta.vercel.app/'} 
               style={{
                 fontSize: '0.88rem',
                 color: 'var(--accent-color)',
