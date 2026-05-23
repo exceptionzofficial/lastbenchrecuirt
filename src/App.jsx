@@ -104,6 +104,47 @@ function App() {
 
   // Admin detail view state
   const [selectedAppDetail, setSelectedAppDetail] = useState(null);
+  const [resumePreviewUrl, setResumePreviewUrl] = useState(null);
+
+  useEffect(() => {
+    if (!selectedAppDetail || !selectedAppDetail.resumeBase64) {
+      setResumePreviewUrl(null);
+      return;
+    }
+
+    try {
+      const base64Data = selectedAppDetail.resumeBase64.includes(',') 
+        ? selectedAppDetail.resumeBase64.split(',')[1] 
+        : selectedAppDetail.resumeBase64;
+
+      const binaryString = window.atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const filename = selectedAppDetail.resumeName || 'Resume.pdf';
+      const ext = filename.split('.').pop().toLowerCase();
+      let mimeType = 'application/pdf';
+      if (ext === 'docx') {
+        mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      } else if (ext === 'doc') {
+        mimeType = 'application/msword';
+      }
+
+      const blob = new Blob([bytes], { type: mimeType });
+      const blobUrl = URL.createObjectURL(blob);
+      setResumePreviewUrl(blobUrl);
+
+      return () => {
+        URL.revokeObjectURL(blobUrl);
+      };
+    } catch (err) {
+      console.error('Failed to generate resume preview URL:', err);
+      setResumePreviewUrl(null);
+    }
+  }, [selectedAppDetail]);
 
   // Fetch jobs and applications
   const fetchData = async () => {
@@ -937,7 +978,9 @@ function App() {
                       <FileText size={24} style={{ color: 'var(--accent-color)' }} />
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--primary-color)' }}>{selectedAppDetail.resumeName}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>Mock PDF Document · 185 KB</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                          {selectedAppDetail.resumeName && selectedAppDetail.resumeName.toLowerCase().endsWith('.pdf') ? 'PDF Document' : 'Word Document (.docx)'} · Verified Resume
+                        </div>
                       </div>
                     </div>
                     <button 
@@ -981,6 +1024,63 @@ function App() {
                       </button>
                     ))}
                   </div>
+
+                  {/* RESUME PREVIEW FRAME */}
+                  <h4 style={{ color: 'var(--primary-color)', fontWeight: 700, fontSize: '0.9rem', marginTop: '24px', marginBottom: '12px' }}>Resume Live Preview</h4>
+                  {resumePreviewUrl ? (
+                    (() => {
+                      const filename = selectedAppDetail.resumeName || 'Resume.pdf';
+                      const ext = filename.split('.').pop().toLowerCase();
+                      if (ext === 'pdf') {
+                        return (
+                          <iframe 
+                            src={resumePreviewUrl} 
+                            style={{ 
+                              width: '100%', 
+                              height: '350px', 
+                              border: '1px solid rgba(62,39,35,0.08)', 
+                              borderRadius: '12px',
+                              background: '#fcfcfc',
+                              boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.02)'
+                            }} 
+                            title="Candidate Resume Preview"
+                          />
+                        );
+                      } else {
+                        return (
+                          <div style={{
+                            padding: '24px 16px',
+                            background: 'rgba(62,39,35,0.02)',
+                            border: '1.5px dashed rgba(62,39,35,0.12)',
+                            borderRadius: '12px',
+                            textAlign: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '12px'
+                          }}>
+                            <FileText size={32} style={{ color: 'var(--text-light)', opacity: 0.6 }} />
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600 }}>Word Document Preview</span>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', margin: 0, lineHeight: 1.4 }}>
+                              Live preview is optimized for PDF resumes. Click the <strong>View</strong> button above to download and read this Word document.
+                            </p>
+                          </div>
+                        );
+                      }
+                    })()
+                  ) : (
+                    <div style={{
+                      padding: '20px',
+                      background: 'rgba(62,39,35,0.02)',
+                      border: '1px solid rgba(62,39,35,0.06)',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                      fontSize: '0.82rem',
+                      color: 'var(--text-light)'
+                    }}>
+                      No file preview available.
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginTop: '24px' }}>
